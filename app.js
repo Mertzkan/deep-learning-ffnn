@@ -22,6 +22,105 @@ function setStatus(message) {
   document.getElementById('status').textContent = message;
 }
 
+function updateStorageButtons() {
+  const hasDataset = localStorage.getItem(STORAGE_DATA_KEY) !== null;
+
+  const hasCleanModel =
+    localStorage.getItem('tensorflowjs_models/ffnn-clean-model/info') !== null;
+  const hasBestModel =
+    localStorage.getItem('tensorflowjs_models/ffnn-best-model/info') !== null;
+  const hasOverfitModel =
+    localStorage.getItem('tensorflowjs_models/ffnn-overfit-model/info') !==
+    null;
+
+  const hasAllModels = hasCleanModel && hasBestModel && hasOverfitModel;
+
+  const loadDataButton = document.getElementById('loadDataBtn');
+  const loadModelsButton = document.getElementById('loadModelsBtn');
+
+  loadDataButton.disabled = !hasDataset;
+  loadModelsButton.disabled = !hasAllModels;
+
+  loadDataButton.title = hasDataset
+    ? 'Gespeicherten Datensatz laden'
+    : 'Noch kein gespeicherter Datensatz vorhanden';
+
+  loadModelsButton.title = hasAllModels
+    ? 'Gespeicherte Modelle laden'
+    : 'Noch keine gespeicherten Modelle vorhanden';
+}
+
+function showPlotLoadingMessages() {
+  const plotIds = [
+    'plotDataClean',
+    'plotDataNoisy',
+    'plotLossClean',
+    'plotLossNoisy',
+    'plotCleanTrain',
+    'plotCleanTest',
+    'plotBestTrain',
+    'plotBestTest',
+    'plotOverfitTrain',
+    'plotOverfitTest',
+  ];
+
+  for (const id of plotIds) {
+    const element = document.getElementById(id);
+
+    if (element) {
+      element.innerHTML = `
+        <div class="plotLoading">
+          <strong>Diagramm wird vorbereitet</strong>
+          <span>Daten werden erzeugt und visualisiert.</span>
+        </div>
+      `;
+    }
+  }
+}
+
+function showPredictionLoadingMessages() {
+  const plotIds = [
+    'plotLossClean',
+    'plotLossNoisy',
+    'plotCleanTrain',
+    'plotCleanTest',
+    'plotBestTrain',
+    'plotBestTest',
+    'plotOverfitTrain',
+    'plotOverfitTest',
+  ];
+
+  for (const id of plotIds) {
+    const element = document.getElementById(id);
+
+    if (element) {
+      element.innerHTML = `
+        <div class="plotLoading">
+          <strong>Training läuft</strong>
+          <span>Modelle werden trainiert. Ergebnisse erscheinen automatisch.</span>
+        </div>
+      `;
+    }
+  }
+}
+
+function showLossUnavailableMessage() {
+  const lossPlotIds = ['plotLossClean', 'plotLossNoisy'];
+
+  for (const id of lossPlotIds) {
+    const element = document.getElementById(id);
+
+    if (element) {
+      element.innerHTML = `
+        <div class="plotLoading">
+          <strong>Kein Loss Verlauf verfügbar</strong>
+          <span>Die Modelle wurden geladen. TensorFlow.js speichert Modellgewichte, aber keine Trainingshistorie.</span>
+        </div>
+      `;
+    }
+  }
+}
+
 /*
   Seedbarer Zufallsgenerator.
   Dadurch sind Experimente reproduzierbar, was für Dokumentation und Bewertung wichtig ist.
@@ -184,6 +283,15 @@ function createModel() {
     }),
   );
 
+  model.compile({
+    optimizer: tf.train.adam(0.01),
+    loss: 'meanSquaredError',
+  });
+
+  return model;
+}
+
+function compileModel(model) {
   model.compile({
     optimizer: tf.train.adam(0.01),
     loss: 'meanSquaredError',
@@ -522,6 +630,7 @@ function renderAllPredictions() {
 async function runExperiment(useExistingData = false) {
   const runButton = document.getElementById('runBtn');
   runButton.disabled = true;
+  showPlotLoadingMessages();
 
   try {
     setStatus('Datensatz wird vorbereitet.');
@@ -532,6 +641,7 @@ async function runExperiment(useExistingData = false) {
 
     validateDataset(state.data);
     renderDatasetPlots();
+    showPredictionLoadingMessages();
 
     const cleanEpochs = Number(
       document.getElementById('cleanEpochsInput').value,
@@ -593,6 +703,7 @@ function saveDataset() {
   }
 
   localStorage.setItem(STORAGE_DATA_KEY, JSON.stringify(state.data));
+  updateStorageButtons();
   setStatus('Datensatz wurde im Local Storage gespeichert.');
 }
 
@@ -610,10 +721,19 @@ function loadDataset() {
   state.data = loaded;
   renderDatasetPlots();
 
-  setStatus(
-    'Datensatz wurde geladen. Starte Training mit geladenem Datensatz.',
-  );
-  runExperiment(true);
+  const hasModels =
+    state.models.clean && state.models.best && state.models.overfit;
+
+  if (hasModels) {
+    renderAllPredictions();
+    setStatus(
+      'Datensatz wurde geladen und mit den aktuell geladenen Modellen ausgewertet.',
+    );
+  } else {
+    setStatus(
+      'Datensatz wurde geladen. Lade gespeicherte Modelle oder starte ein neues Training.',
+    );
+  }
 }
 
 async function saveModels() {
@@ -626,26 +746,37 @@ async function saveModels() {
   await state.models.best.save(MODEL_BEST_KEY);
   await state.models.overfit.save(MODEL_OVERFIT_KEY);
 
+  updateStorageButtons();
   setStatus('Modelle wurden im Local Storage gespeichert.');
 }
 
 async function loadModels() {
   if (!state.data) {
-    state.data = generateDataset();
+    const raw = localStorage.getItem(STORAGE_DATA_KEY);
+
+    if (raw) {
+      const loaded = JSON.parse(raw);
+      validateDataset(loaded);
+      state.data = loaded;
+    } else {
+      state.data = generateDataset();
+    }
   }
 
   validateDataset(state.data);
   renderDatasetPlots();
 
-  state.models.clean = await tf.loadLayersModel(MODEL_CLEAN_KEY);
-  state.models.best = await tf.loadLayersModel(MODEL_BEST_KEY);
-  state.models.overfit = await tf.loadLayersModel(MODEL_OVERFIT_KEY);
+  state.models.clean = compileModel(await tf.loadLayersModel(MODEL_CLEAN_KEY));
+  state.models.best = compileModel(await tf.loadLayersModel(MODEL_BEST_KEY));
+  state.models.overfit = compileModel(
+    await tf.loadLayersModel(MODEL_OVERFIT_KEY),
+  );
 
+  showLossUnavailableMessage();
   renderAllPredictions();
 
   setStatus(
-    'Modelle wurden geladen und getestet. ' +
-      'Der Loss Verlauf ist nach dem Laden nicht verfügbar, weil nur Modellgewichte gespeichert wurden.',
+    'Gespeicherte Modelle wurden geladen und ohne erneutes Training ausgewertet.',
   );
 }
 
@@ -702,5 +833,7 @@ function registerEventListeners() {
 
 window.addEventListener('load', () => {
   registerEventListeners();
+  updateStorageButtons();
+  showPlotLoadingMessages();
   runExperiment(false);
 });

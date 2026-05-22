@@ -356,6 +356,30 @@ button:disabled {
   text-decoration: underline;
 }
 
+.plotLoading {
+  min-height: 430px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  padding: 24px;
+  text-align: center;
+  background: #ffffff;
+  color: var(--muted);
+  border-radius: 14px;
+}
+
+.plotLoading strong {
+  color: #344054;
+  font-size: 16px;
+}
+
+.plotLoading span {
+  max-width: 340px;
+  font-size: 14px;
+}
+
 @media (max-width: 900px) {
   .container {
     width: min(100% - 28px, 1480px);
