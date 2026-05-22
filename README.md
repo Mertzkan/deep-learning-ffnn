@@ -1,5 +1,11 @@
 # FFNN Regression mit TensorFlow.js
 
+## Live Demo
+
+Die Web Anwendung ist öffentlich über GitHub Pages erreichbar:
+
+https://mertzkan.github.io/deep-learning-ffnn/
+
 ## Start in VS Code
 
 1. Ordner in VS Code öffnen.
@@ -44,3 +50,5 @@ Die Anwendung startet automatisch einen Trainingsdurchlauf.
 - Best Fit Test MSE = 0.066275
 - Overfit Train MSE = 0.021361
 - Overfit Test MSE = 0.069188
+
+##

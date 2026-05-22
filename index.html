@@ -197,35 +197,39 @@
         <div class="docBlock">
           <p>
             Das Clean Modell wurde auf unverrauschten Daten trainiert und
-            erreicht mit einem Trainings MSE von 0.000034 und einem Test MSE von
-            0.009105 eine sehr gute Approximation der Ground Truth Funktion. Der
-            Testfehler ist höher als der Trainingsfehler, weil das Modell nur 50
+            approximiert die Ground Truth Funktion sehr gut. Der Testfehler kann
+            trotzdem höher als der Trainingsfehler sein, weil das Modell nur 50
             zufällige Trainingspunkte sieht und auf 50 unabhängigen Testpunkten
             bewertet wird.
           </p>
 
           <p>
-            Das Best Fit Modell wurde auf verrauschten Daten mit 300 Epochen
-            trainiert. Es erreicht einen Trainings MSE von 0.035399 und einen
-            Test MSE von 0.066275. Damit ist es das bessere Modell für die
-            Generalisierung auf unbekannte verrauschte Testdaten.
+            Das Best Fit Modell wurde auf verrauschten Daten mit moderater
+            Trainingsdauer trainiert. Ziel dieses Modells ist nicht, jedes
+            einzelne verrauschte Trainingslabel exakt zu treffen, sondern die
+            zugrunde liegende Struktur der Funktion möglichst gut zu lernen.
           </p>
 
           <p>
-            Das Overfit Modell wurde mit 8000 Epochen deutlich länger trainiert.
-            Es erreicht dadurch einen niedrigeren Trainings MSE von 0.021361,
-            aber einen schlechteren Test MSE von 0.069188. Dieses Verhalten
-            zeigt Overfitting, weil das Modell stärker auf die verrauschten
-            Trainingslabels passt und dadurch auf unabhängigen Testdaten
-            schlechter generalisiert.
+            Das Overfit Modell wurde auf denselben verrauschten Trainingsdaten
+            deutlich länger trainiert. Dadurch erreicht es typischerweise einen
+            niedrigeren Trainings MSE als das Best Fit Modell, generalisiert
+            aber schlechter auf unabhängige Testdaten.
           </p>
 
           <p>
-            Die Testdaten wurden nicht zum Training verwendet, sondern nur zur
-            abschließenden Bewertung. In einer realen Modellwahl würde
-            zusätzlich ein Validierungsdatensatz verwendet werden, um Parameter
-            wie die Anzahl der Epochen auszuwählen, ohne die unabhängigen
-            Testdaten indirekt für die Optimierung zu benutzen.
+            Dieses Verhalten zeigt Overfitting: Das Modell passt sich stärker an
+            die verrauschten Trainingslabels an, verbessert dadurch den
+            Trainingsfehler, verliert aber Generalisierungsfähigkeit. Die
+            Testdaten wurden nicht zum Training verwendet, sondern nur zur
+            abschließenden Bewertung.
+          </p>
+
+          <p>
+            In einer realen Modellwahl würde zusätzlich ein
+            Validierungsdatensatz verwendet werden, um Parameter wie die Anzahl
+            der Epochen auszuwählen, ohne die unabhängigen Testdaten indirekt
+            für die Optimierung zu benutzen.
           </p>
         </div>
       </section>
