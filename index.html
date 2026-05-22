@@ -1,0 +1,423 @@
+<!doctype html>
+<html lang="de">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>FFNN Regression mit TensorFlow.js</title>
+
+    <!-- TensorFlow.js: Modellaufbau, Training, Prediction und Speicherung -->
+    <script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs@4.22.0/dist/tf.min.js"></script>
+
+    <!-- Plotly.js: Diagramme für Daten, Loss und Vorhersagen -->
+    <script
+      src="https://cdn.plot.ly/plotly-3.4.0.min.js"
+      charset="utf-8"
+    ></script>
+
+    <link rel="stylesheet" href="style.css" />
+  </head>
+  <body>
+    <header class="pageHeader">
+      <h1>Regression mit Feed Forward Neural Network und TensorFlow.js</h1>
+      <p>
+        Ziel dieser Web Anwendung ist die Approximation einer unbekannten
+        reellwertigen Funktion auf dem Intervall [-2, 2] mit einem Feed Forward
+        Neural Network.
+      </p>
+      <div class="headerBadges">
+        <span>TensorFlow.js</span>
+        <span>FFNN Regression</span>
+        <span>MSE Evaluation</span>
+        <span>Overfitting Analyse</span>
+      </div>
+    </header>
+
+    <main class="container">
+      <section class="card">
+        <h2>Entwicklungssteuerung</h2>
+
+        <div class="controls">
+          <label>
+            Seed
+            <input id="seedInput" type="number" value="42" />
+          </label>
+
+          <label>
+            N Datenpunkte
+            <input id="nInput" type="number" value="100" min="20" step="2" />
+          </label>
+
+          <label>
+            Rauschvarianz
+            <input
+              id="noiseInput"
+              type="number"
+              value="0.05"
+              min="0"
+              step="0.01"
+            />
+          </label>
+
+          <label>
+            Clean Epochs
+            <input id="cleanEpochsInput" type="number" value="1200" min="1" />
+          </label>
+
+          <label>
+            Best Fit Epochs
+            <input id="bestEpochsInput" type="number" value="300" min="1" />
+          </label>
+
+          <label>
+            Overfit Epochs
+            <input id="overfitEpochsInput" type="number" value="8000" min="1" />
+          </label>
+
+          <button id="runBtn">Datensatz erzeugen und trainieren</button>
+          <button id="saveDataBtn" class="secondary">
+            Datensatz speichern
+          </button>
+          <button id="loadDataBtn" class="secondary">Datensatz laden</button>
+          <button id="saveModelsBtn" class="secondary">
+            Modelle speichern
+          </button>
+          <button id="loadModelsBtn" class="secondary">Modelle laden</button>
+        </div>
+
+        <p id="status" class="status">
+          Bereit. Die Anwendung startet automatisch mit einem
+          Trainingsdurchlauf.
+        </p>
+
+        <p class="note">
+          Die Testdaten werden ausschließlich zur Auswertung verwendet. Für eine
+          echte Modellwahl wäre zusätzlich ein Validierungsdatensatz notwendig.
+        </p>
+      </section>
+
+      <section class="card">
+        <h2>R1: Datensätze</h2>
+        <div class="grid2">
+          <article>
+            <h3>Ohne Rauschen</h3>
+            <div id="plotDataClean" class="plotBox"></div>
+          </article>
+
+          <article>
+            <h3>Mit Rauschen</h3>
+            <div id="plotDataNoisy" class="plotBox"></div>
+          </article>
+        </div>
+      </section>
+
+      <section class="card">
+        <h2>Loss Verlauf während des Trainings</h2>
+        <div class="grid2">
+          <article>
+            <h3>Clean Modell</h3>
+            <div id="plotLossClean" class="plotBox"></div>
+          </article>
+
+          <article>
+            <h3>Noisy Modelle</h3>
+            <div id="plotLossNoisy" class="plotBox"></div>
+          </article>
+        </div>
+      </section>
+
+      <section class="card">
+        <h2>R2: Vorhersage des Modells, trainiert ohne Rauschen</h2>
+        <div class="grid2">
+          <article>
+            <h3>Trainingsdaten ohne Rauschen</h3>
+            <div id="plotCleanTrain" class="plotBox"></div>
+            <p id="lossCleanTrain" class="lossText"></p>
+          </article>
+
+          <article>
+            <h3>Testdaten ohne Rauschen</h3>
+            <div id="plotCleanTest" class="plotBox"></div>
+            <p id="lossCleanTest" class="lossText"></p>
+          </article>
+        </div>
+      </section>
+
+      <section class="card">
+        <h2>R3: Best Fit Modell, trainiert mit Rauschen</h2>
+        <div class="grid2">
+          <article>
+            <h3>Trainingsdaten mit Rauschen</h3>
+            <div id="plotBestTrain" class="plotBox"></div>
+            <p id="lossBestTrain" class="lossText"></p>
+          </article>
+
+          <article>
+            <h3>Testdaten mit Rauschen</h3>
+            <div id="plotBestTest" class="plotBox"></div>
+            <p id="lossBestTest" class="lossText"></p>
+          </article>
+        </div>
+      </section>
+
+      <section class="card">
+        <h2>R4: Overfit Modell, trainiert mit Rauschen</h2>
+        <div class="grid2">
+          <article>
+            <h3>Trainingsdaten mit Rauschen</h3>
+            <div id="plotOverfitTrain" class="plotBox"></div>
+            <p id="lossOverfitTrain" class="lossText"></p>
+          </article>
+
+          <article>
+            <h3>Testdaten mit Rauschen</h3>
+            <div id="plotOverfitTest" class="plotBox"></div>
+            <p id="lossOverfitTest" class="lossText"></p>
+          </article>
+        </div>
+      </section>
+
+      <section class="card">
+        <h2>Experiment Zusammenfassung</h2>
+        <div class="summaryGrid">
+          <div>
+            <h3>Finale Einstellungen</h3>
+            <p id="experimentSettings" class="mono"></p>
+          </div>
+          <div>
+            <h3>Finale MSE Werte</h3>
+            <p id="experimentLosses" class="mono"></p>
+          </div>
+        </div>
+        <p id="experimentObservation" class="highlightText"></p>
+      </section>
+
+      <section class="card">
+        <h2>Diskussion</h2>
+
+        <div class="docBlock">
+          <p>
+            Das Clean Modell wurde auf unverrauschten Daten trainiert und
+            erreicht mit einem Trainings MSE von 0.000034 und einem Test MSE von
+            0.009105 eine sehr gute Approximation der Ground Truth Funktion. Der
+            Testfehler ist höher als der Trainingsfehler, weil das Modell nur 50
+            zufällige Trainingspunkte sieht und auf 50 unabhängigen Testpunkten
+            bewertet wird.
+          </p>
+
+          <p>
+            Das Best Fit Modell wurde auf verrauschten Daten mit 300 Epochen
+            trainiert. Es erreicht einen Trainings MSE von 0.035399 und einen
+            Test MSE von 0.066275. Damit ist es das bessere Modell für die
+            Generalisierung auf unbekannte verrauschte Testdaten.
+          </p>
+
+          <p>
+            Das Overfit Modell wurde mit 8000 Epochen deutlich länger trainiert.
+            Es erreicht dadurch einen niedrigeren Trainings MSE von 0.021361,
+            aber einen schlechteren Test MSE von 0.069188. Dieses Verhalten
+            zeigt Overfitting, weil das Modell stärker auf die verrauschten
+            Trainingslabels passt und dadurch auf unabhängigen Testdaten
+            schlechter generalisiert.
+          </p>
+
+          <p>
+            Die Testdaten wurden nicht zum Training verwendet, sondern nur zur
+            abschließenden Bewertung. In einer realen Modellwahl würde
+            zusätzlich ein Validierungsdatensatz verwendet werden, um Parameter
+            wie die Anzahl der Epochen auszuwählen, ohne die unabhängigen
+            Testdaten indirekt für die Optimierung zu benutzen.
+          </p>
+        </div>
+      </section>
+
+      <section class="card">
+        <h2>Qualitätssicherung und Anforderungsprüfung</h2>
+        <ul class="qaList">
+          <li>
+            Es werden genau 100 zufällige x Werte gleichverteilt im Intervall
+            [-2, 2] erzeugt.
+          </li>
+          <li>
+            Die Daten werden zufällig in 50 Trainingspaare und 50 Testpaare
+            aufgeteilt.
+          </li>
+          <li>
+            Das künstliche Rauschen wird nur auf die y Labels addiert, nicht auf
+            die x Werte.
+          </li>
+          <li>
+            Die Rauschvarianz beträgt 0.05, also ist die Standardabweichung
+            sqrt(0.05).
+          </li>
+          <li>
+            Die Testdaten werden nicht zum Training verwendet, sondern nur zur
+            Evaluation.
+          </li>
+          <li>
+            Alle dargestellten MSE Werte werden nach dem Training separat auf
+            den passenden Datensätzen berechnet.
+          </li>
+          <li>
+            Das Clean Modell, das Best Fit Modell und das Overfit Modell sind
+            drei getrennt trainierte Modelle.
+          </li>
+          <li>
+            Datensatz und Modelle können gespeichert und wieder geladen werden.
+          </li>
+          <li>
+            Die Seite erzeugt die Daten und Ergebnisse beim initialen Laden
+            automatisch dynamisch im Browser.
+          </li>
+        </ul>
+      </section>
+
+      <section class="card">
+        <h2>Dokumentation</h2>
+
+        <h3>1) Technisch</h3>
+        <div class="docBlock">
+          <p>
+            Die Web Anwendung ist als browserbasierte Lösung umgesetzt und
+            besteht aus drei getrennten Dateien:
+            <span class="mono">index.html</span> für die Seitenstruktur und
+            Dokumentation, <span class="mono">style.css</span> für Layout und
+            Gestaltung sowie <span class="mono">app.js</span> für
+            Datenerzeugung, Modelltraining, Evaluation und Visualisierung.
+            Dadurch bleiben Darstellung, Inhalt und Programmlogik
+            nachvollziehbar voneinander getrennt.
+          </p>
+
+          <p>
+            Für das maschinelle Lernen wird
+            <strong>TensorFlow.js</strong> verwendet. Damit werden die Feed
+            Forward Neural Networks im Browser erstellt, kompiliert, trainiert,
+            für Vorhersagen genutzt und lokal gespeichert. Die Modelle verwenden
+            das TensorFlow.js Speicherziel
+            <span class="mono">localstorage://</span>, sodass trainierte Modelle
+            im Browser gespeichert und erneut geladen werden können.
+          </p>
+
+          <p>
+            Für die Visualisierung wird <strong>Plotly.js</strong> eingesetzt.
+            Die Bibliothek erzeugt die Scatterplots der Trainings und Testdaten,
+            die Linienplots der Modellvorhersagen sowie die Loss Verläufe
+            während des Trainings. Dadurch werden Datensätze, Modellverhalten
+            und Overfitting direkt auf der HTML Seite sichtbar.
+          </p>
+
+          <p>
+            Datensätze werden ebenfalls im
+            <span class="mono">Local Storage</span> des Browsers gespeichert.
+            Der feste Seed 42 sorgt dafür, dass die zufällige Datenerzeugung
+            reproduzierbar ist und die dargestellten Experimente erneut
+            nachvollzogen werden können. Die Anwendung benötigt keine
+            zusätzliche Build Umgebung und kann über einen lokalen oder
+            öffentlichen Webserver direkt im Browser ausgeführt werden.
+          </p>
+        </div>
+
+        <h3>2) Fachlich</h3>
+        <div class="docBlock">
+          <p>
+            Die Implementierung erzeugt mit einem seedbaren Zufallsgenerator
+            genau 100 x Werte gleichverteilt im Intervall [-2, 2]. Für jeden x
+            Wert wird mit der vorgegebenen Polynomfunktion der zugehörige y Wert
+            berechnet. Dieser unverrauschte Datensatz bildet die Grundlage für
+            die weiteren Experimente.
+          </p>
+
+          <p>
+            Anschließend werden die 100 Datenpaare zufällig in 50 Trainingsdaten
+            und 50 Testdaten aufgeteilt. Aus dem unverrauschten Datensatz wird
+            zusätzlich ein verrauschter Datensatz erzeugt. Dabei wird
+            ausschließlich auf die y Labels normalverteiltes Rauschen mit
+            Mittelwert 0 und Varianz 0.05 addiert. Die x Werte bleiben
+            unverändert, sodass gezielt Label Rauschen simuliert wird.
+          </p>
+
+          <p>
+            Das verwendete Modell ist ein Feed Forward Neural Network mit zwei
+            Hidden Layern und jeweils 100 Neuronen. In den Hidden Layern wird
+            ReLU als Aktivierungsfunktion verwendet, während der Output Layer
+            aus einem einzelnen linearen Neuron besteht. Als Fehlerfunktion wird
+            Mean Squared Error genutzt. Trainiert wird mit dem Adam Optimizer,
+            einer Lernrate von 0.01 und einer Batch Size von 32.
+          </p>
+
+          <p>
+            Verglichen werden drei getrennt trainierte Modelle. Das Clean Modell
+            wird auf unverrauschten Trainingsdaten trainiert. Das Best Fit
+            Modell wird auf verrauschten Trainingsdaten mit moderater
+            Trainingsdauer trainiert, um möglichst gut zu generalisieren. Das
+            Overfit Modell wird auf denselben verrauschten Trainingsdaten
+            deutlich länger trainiert, damit es stärker auf das Rauschen der
+            Trainingslabels passt.
+          </p>
+
+          <p>
+            Nach dem Training werden alle Modelle separat auf den passenden
+            Trainings und Testdaten ausgewertet. Die MSE Werte werden nicht aus
+            dem Training übernommen, sondern nachträglich für die dargestellten
+            Datensätze berechnet. Dadurch passen die angezeigten Loss Werte
+            direkt zu den jeweiligen Diagrammen.
+          </p>
+        </div>
+      </section>
+    </main>
+
+    <footer class="pageFooter">
+      <div>
+        <strong>Regression mit FFNN</strong>
+        <p>Erstellt von Mert Özkan</p>
+      </div>
+
+      <div>
+        <strong>Verwendete Quellen und Frameworks</strong>
+        <ul>
+          <li>
+            TensorFlow.js Dokumentation:
+            <a
+              href="https://js.tensorflow.org/api/latest/"
+              target="_blank"
+              rel="noopener"
+            >
+              js.tensorflow.org/api/latest
+            </a>
+          </li>
+          <li>
+            TensorFlow.js Tutorial „Making predictions from 2d data“:
+            <a
+              href="https://codelabs.developers.google.com/codelabs/tfjs-training-regression"
+              target="_blank"
+              rel="noopener"
+            >
+              codelabs.developers.google.com/codelabs/tfjs-training-regression
+            </a>
+          </li>
+          <li>
+            Plotly.js Dokumentation:
+            <a
+              href="https://plotly.com/javascript/"
+              target="_blank"
+              rel="noopener"
+            >
+              plotly.com/javascript
+            </a>
+          </li>
+          <li>
+            Box Muller Methode für normalverteiltes Rauschen:
+            <a
+              href="https://stackoverflow.com/questions/25582882/javascript-math-random-normal-distribution-gaussian-bell-curve"
+              target="_blank"
+              rel="noopener"
+            >
+              Stack Overflow Beitrag
+            </a>
+          </li>
+        </ul>
+      </div>
+    </footer>
+
+    <script src="app.js"></script>
+  </body>
+</html>
