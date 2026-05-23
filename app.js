@@ -2,6 +2,10 @@ const STORAGE_DATA_KEY = 'ffnnRegressionDataset';
 const MODEL_CLEAN_KEY = 'localstorage://ffnn-clean-model';
 const MODEL_BEST_KEY = 'localstorage://ffnn-best-model';
 const MODEL_OVERFIT_KEY = 'localstorage://ffnn-overfit-model';
+const PRETRAINED_HISTORY_URL = 'models/training-history.json';
+const PRETRAINED_CLEAN_URL = 'models/clean/clean-model.json';
+const PRETRAINED_BEST_URL = 'models/best/best-model.json';
+const PRETRAINED_OVERFIT_URL = 'models/overfit/overfit-model.json';
 
 const state = {
   data: null,
@@ -721,17 +725,14 @@ function loadDataset() {
   state.data = loaded;
   renderDatasetPlots();
 
-  const hasModels =
-    state.models.clean && state.models.best && state.models.overfit;
-
-  if (hasModels) {
+  if (state.models.clean && state.models.best && state.models.overfit) {
     renderAllPredictions();
     setStatus(
-      'Datensatz wurde geladen und mit den aktuell geladenen Modellen ausgewertet.',
+      'Datensatz wurde geladen und mit den aktuellen Modellen ausgewertet.',
     );
   } else {
     setStatus(
-      'Datensatz wurde geladen. Lade gespeicherte Modelle oder starte ein neues Training.',
+      'Datensatz wurde geladen. Lade Modelle oder starte ein neues Training.',
     );
   }
 }
@@ -752,15 +753,7 @@ async function saveModels() {
 
 async function loadModels() {
   if (!state.data) {
-    const raw = localStorage.getItem(STORAGE_DATA_KEY);
-
-    if (raw) {
-      const loaded = JSON.parse(raw);
-      validateDataset(loaded);
-      state.data = loaded;
-    } else {
-      state.data = generateDataset();
-    }
+    state.data = generateDataset();
   }
 
   validateDataset(state.data);
@@ -778,6 +771,42 @@ async function loadModels() {
   setStatus(
     'Gespeicherte Modelle wurden geladen und ohne erneutes Training ausgewertet.',
   );
+}
+
+async function loadTrainingHistory() {
+  const response = await fetch(PRETRAINED_HISTORY_URL);
+
+  if (!response.ok) {
+    throw new Error('Trainingshistorie konnte nicht geladen werden.');
+  }
+
+  const history = await response.json();
+
+  state.histories.clean = history.clean;
+  state.histories.best = history.best;
+  state.histories.overfit = history.overfit;
+
+  renderLossPlots();
+}
+
+async function loadPretrainedModels() {
+  setStatus('Lade vortrainierte Modelle.');
+
+  state.models.clean = compileModel(
+    await tf.loadLayersModel(PRETRAINED_CLEAN_URL),
+  );
+  state.models.best = compileModel(
+    await tf.loadLayersModel(PRETRAINED_BEST_URL),
+  );
+  state.models.overfit = compileModel(
+    await tf.loadLayersModel(PRETRAINED_OVERFIT_URL),
+  );
+
+  renderDatasetPlots();
+  await loadTrainingHistory();
+  renderAllPredictions();
+
+  setStatus('Vortrainierte Modelle wurden geladen und ausgewertet.');
 }
 
 function renderExperimentSummary() {
@@ -831,9 +860,31 @@ function registerEventListeners() {
   });
 }
 
+/*
 window.addEventListener('load', () => {
   registerEventListeners();
   updateStorageButtons();
-  showPlotLoadingMessages();
+  //showPlotLoadingMessages();
   runExperiment(false);
+});
+*/
+
+window.addEventListener('load', async () => {
+  registerEventListeners();
+
+  try {
+    setStatus(
+      'Datensatz wird erzeugt und vortrainierte Modelle werden geladen.',
+    );
+    state.data = generateDataset();
+    validateDataset(state.data);
+    renderDatasetPlots();
+    await loadPretrainedModels();
+  } catch (error) {
+    console.error(error);
+    setStatus(
+      'Vortrainierte Modelle konnten nicht geladen werden. Starte stattdessen ein neues Training.',
+    );
+    await runExperiment(false);
+  }
 });

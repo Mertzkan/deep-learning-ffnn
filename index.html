@@ -294,11 +294,14 @@
           <p>
             Für das maschinelle Lernen wird
             <strong>TensorFlow.js</strong> verwendet. Damit werden die Feed
-            Forward Neural Networks im Browser erstellt, kompiliert, trainiert,
-            für Vorhersagen genutzt und lokal gespeichert. Die Modelle verwenden
-            das TensorFlow.js Speicherziel
-            <span class="mono">localstorage://</span>, sodass trainierte Modelle
-            im Browser gespeichert und erneut geladen werden können.
+            Forward Neural Networks im Browser erstellt, kompiliert, trainiert
+            und für Vorhersagen genutzt. Für die initiale Darstellung der Abgabe
+            werden vortrainierte TensorFlow.js Modelle aus dem Projektordner
+            <span class="mono">models/</span> geladen und direkt auf den
+            erzeugten Datensätzen ausgewertet. Zusätzlich können im
+            Entwicklungsmodus neu trainierte Modelle über das TensorFlow.js
+            Speicherziel <span class="mono">localstorage://</span> lokal im
+            Browser gespeichert und erneut geladen werden.
           </p>
 
           <p>
@@ -310,13 +313,14 @@
           </p>
 
           <p>
-            Datensätze werden ebenfalls im
-            <span class="mono">Local Storage</span> des Browsers gespeichert.
-            Der feste Seed 42 sorgt dafür, dass die zufällige Datenerzeugung
-            reproduzierbar ist und die dargestellten Experimente erneut
-            nachvollzogen werden können. Die Anwendung benötigt keine
-            zusätzliche Build Umgebung und kann über einen lokalen oder
-            öffentlichen Webserver direkt im Browser ausgeführt werden.
+            Datensätze können im
+            <span class="mono">Local Storage</span> des Browsers gespeichert und
+            wieder geladen werden. Der feste Seed 42 sorgt dafür, dass die
+            zufällige Datenerzeugung reproduzierbar ist und zu den
+            vortrainierten Modellen passende Daten erzeugt werden. Die Anwendung
+            benötigt keine zusätzliche Build Umgebung und kann über einen
+            lokalen oder öffentlichen Webserver direkt im Browser ausgeführt
+            werden.
           </p>
         </div>
 
@@ -359,11 +363,12 @@
           </p>
 
           <p>
-            Nach dem Training werden alle Modelle separat auf den passenden
-            Trainings und Testdaten ausgewertet. Die MSE Werte werden nicht aus
-            dem Training übernommen, sondern nachträglich für die dargestellten
-            Datensätze berechnet. Dadurch passen die angezeigten Loss Werte
-            direkt zu den jeweiligen Diagrammen.
+            Für die initiale Darstellung werden die vortrainierten Modelle
+            geladen und separat auf den passenden Trainings und Testdaten
+            ausgewertet. Die MSE Werte werden nicht aus gespeicherten
+            Trainingslogs übernommen, sondern nach dem Laden der Modelle direkt
+            auf den dargestellten Datensätzen berechnet. Dadurch passen die
+            angezeigten Loss Werte direkt zu den jeweiligen Diagrammen.
           </p>
         </div>
       </section>
